@@ -1,0 +1,14 @@
+# Goal
+float64 x
+float64 y
+float64 final_heading
+---
+# Result
+bool success
+float64 total_distance
+float64 elapsed_time
+---
+# Feedback
+float64 current_x
+float64 current_y
+float64 distance_remaining
