@@ -13,10 +13,10 @@ setup(
     ],
     install_requires=['setuptools'],
     zip_safe=True,
-    maintainer='maxz',
-    maintainer_email='maxyk@umd.edu',
+    maintainer='maxykumd , namfacchetti',
+    maintainer_email='maxyk@umd.edu, gfacchet@terpmail.umd.edu',
     description='TODO: Package description',
-    license='TODO: License declaration',
+    license='Apache-2.0',
     extras_require={
         'test': [
             'pytest',
@@ -24,6 +24,7 @@ setup(
     },
     entry_points={
         'console_scripts': [
+        	'navigate_to_goal_client = group2_gp2.scripts.main_navigate_to_goal_client:main',
         ],
     },
 )
