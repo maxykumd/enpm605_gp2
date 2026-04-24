@@ -1,6 +1,5 @@
 # Goal
-float64 x
-float64 y
+geometry_msgs/Point goal_position
 float64 final_heading
 ---
 # Result
@@ -9,6 +8,5 @@ float64 total_distance
 float64 elapsed_time
 ---
 # Feedback
-float64 current_x
-float64 current_y
+geometry_msgs/Pose current_pose
 float64 distance_remaining

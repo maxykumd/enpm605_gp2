@@ -18,8 +18,8 @@ setup(
     ],
     install_requires=['setuptools'],
     zip_safe=True,
-    maintainer='maxz',
-    maintainer_email='maxyk@umd.edu',
+    maintainer='maxykumd , namfacchetti',
+    maintainer_email='maxyk@umd.edu, gfacchet@terpmail.umd.edu',
     description='ROS 2 action server and client for GP2 navigate-to-goal mission using a two-phase proportional controller.',
     license='Apache-2.0',
     extras_require={
@@ -30,6 +30,7 @@ setup(
     entry_points={
         'console_scripts': [
             'navigate_to_goal_server = group2_gp2.scripts.main_navigate_to_goal_server:main',
+        	'navigate_to_goal_client = group2_gp2.scripts.main_navigate_to_goal_client:main',
         ],
     },
 )

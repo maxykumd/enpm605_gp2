@@ -10,4 +10,5 @@ __pycache__/
 # Build artifacts
 build/
 install/
-log/
+log/__pycache__/
+*.pyc
