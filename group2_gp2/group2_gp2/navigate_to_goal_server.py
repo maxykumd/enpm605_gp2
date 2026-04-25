@@ -1,4 +1,4 @@
-# Name: Yossaphat Kulvatunyou & Nam Facchetti 
+# Name: Yossaphat Kulvatunyou & Nam Facchetti
 # Module: navigate_to_goal_server.py
 
 import math
@@ -13,10 +13,12 @@ from scipy.spatial.transform import Rotation as R
 
 from group2_gp2_interfaces.action import NavigateToGoal
 
+
 class NavigateToGoalServer(Node):
     """ROS 2 Navigate to Server that drives the robot to a goal pose."""
-    MAX_LINEAR = 0.5    # m/s
-    MAX_ANGULAR = 1.0   # rad/s
+
+    MAX_LINEAR = 0.5  # m/s
+    MAX_ANGULAR = 1.0  # rad/s
 
     def __init__(self, node_name: str) -> None:
         """Initialize the NavigateToGoalServer node.
@@ -46,12 +48,16 @@ class NavigateToGoalServer(Node):
         self._yaw = 0.0
 
         self._cb_group = ReentrantCallbackGroup()
-        
+
         # Publishers
         self._cmd_pub = self.create_publisher(TwistStamped, "cmd_vel", 10)
-         # Subscribers
+        # Subscribers
         self._odom_sub = self.create_subscription(
-            Odometry, "odometry/filtered", self._odom_callback, 10, callback_group=self._cb_group
+            Odometry,
+            "odometry/filtered",
+            self._odom_callback,
+            10,
+            callback_group=self._cb_group,
         )
 
         self._action_server = ActionServer(
@@ -61,10 +67,12 @@ class NavigateToGoalServer(Node):
             execute_callback=self._execute_callback,
             goal_callback=self._goal_callback,
             cancel_callback=self._cancel_callback,
-            callback_group=self._cb_group
+            callback_group=self._cb_group,
         )
-        self.get_logger().info(f"NavigateToGoal server ready. Gains: k_rho={self._k_rho}, k_alpha={self._k_alpha}, k_yaw={self._k_yaw}")
-    
+        self.get_logger().info(
+            f"NavigateToGoal server ready. Gains: k_rho={self._k_rho}, k_alpha={self._k_alpha}, k_yaw={self._k_yaw}"
+        )
+
     def _stop_robot(self) -> None:
         """Stop the robot by publish zero to cmd_vel"""
         cmd = TwistStamped()
@@ -76,7 +84,7 @@ class NavigateToGoalServer(Node):
     def _set_feedback_pose(self, feedback_msg: NavigateToGoal.Feedback) -> None:
         """Extracts the x, y position and yaw orientation from the
         ``PoseStamped`` message. Set current pose in feedback message.
-    
+
         Args:
             feedback_msg: The feedback message to update.
         """
@@ -88,7 +96,6 @@ class NavigateToGoalServer(Node):
         feedback_msg.current_pose.orientation.z = q[2]
         feedback_msg.current_pose.orientation.w = q[3]
 
-
     def _odom_callback(self, msg: Odometry) -> None:
         """Update the robot's pose from an odometry message.
 
@@ -99,12 +106,12 @@ class NavigateToGoalServer(Node):
         Args:
             msg: Odometry message from ``odometry/filtered``.
         """
-        
+
         self._x = msg.pose.pose.position.x
         self._y = msg.pose.pose.position.y
         q = msg.pose.pose.orientation
         self._yaw = R.from_quat([q.x, q.y, q.z, q.w]).as_euler("xyz")[2]
-        
+
         if not self._odom_received:
             self._odom_received = True
             self.get_logger().info("First odometry received. Control loop active.")
@@ -121,9 +128,11 @@ class NavigateToGoalServer(Node):
         goal_x = goal_request.goal_position.x
         goal_y = goal_request.goal_position.y
         goal_yaw = goal_request.final_heading
-        self.get_logger().info(f"Goal accepted: ({goal_x:.2f}, {goal_y:.2f}, final_heading={goal_yaw:.2f})")        
+        self.get_logger().info(
+            f"Goal accepted: ({goal_x:.2f}, {goal_y:.2f}, final_heading={goal_yaw:.2f})"
+        )
         return GoalResponse.ACCEPT
-    
+
     def _cancel_callback(self, goal_handle) -> CancelResponse:
         """Accept all cancel requests.
 
@@ -133,11 +142,13 @@ class NavigateToGoalServer(Node):
         Returns:
             CancelResponse.ACCEPT.
         """
-        self.get_logger().warn("Cancel requested. Stopping the robot and finalizing the goal.")
+        self.get_logger().warn(
+            "Cancel requested. Stopping the robot and finalizing the goal."
+        )
         return CancelResponse.ACCEPT
-    
+
     def _execute_callback(self, goal_handle) -> NavigateToGoal.Result:
-        """Get goal from client and drive until goal, 
+        """Get goal from client and drive until goal,
         then rotate until correct direction and return the result
 
         Args:
@@ -146,22 +157,25 @@ class NavigateToGoalServer(Node):
         Returns:
             NavigateToGoal.Result
         """
-        
+
         # Get goal from action request
         goal_x = goal_handle.request.goal_position.x
         goal_y = goal_handle.request.goal_position.y
         goal_yaw = goal_handle.request.final_heading
         total_dist = 0.0
-        
+
         result = NavigateToGoal.Result()
         feedback_msg = NavigateToGoal.Feedback()
 
         start_time = time.time()
-        rate = self.create_rate(20) # loop run 20 time per sec
-        feedback_counter = 0 # counter for feedback freqeuncy at 2Hz (every 10 iter at 20Hz)
+        rate = self.create_rate(20)  # loop run 20 time per sec
+        feedback_counter = (
+            0  # counter for feedback freqeuncy at 2Hz (every 10 iter at 20Hz)
+        )
 
-
-        rho = math.sqrt((goal_x - self._x)**2 + (goal_y - self._y)**2) # distance from curr to goal
+        rho = math.sqrt(
+            (goal_x - self._x) ** 2 + (goal_y - self._y) ** 2
+        )  # distance from curr to goal
         prev_x = self._x
         prev_y = self._y
 
@@ -169,7 +183,6 @@ class NavigateToGoalServer(Node):
         # k_rho scale dist err into linear_vel
         # k_allpha scale heading err(alpha) into angular_vel
         while rho > self._tolerance:
-
             # Check for cancellation before to stop robot and return result
             if goal_handle.is_cancel_requested:
                 self._stop_robot()
@@ -177,19 +190,21 @@ class NavigateToGoalServer(Node):
                 result.success = False
                 result.total_distance = total_dist
                 result.elapsed_time = float(time.time() - start_time)
-                self.get_logger().info(f"Goal canceled: total_distance={total_dist:.2f}, elapsed_time={result.elapsed_time:.2f}s.")                
+                self.get_logger().info(
+                    f"Goal canceled: total_distance={total_dist:.2f}, elapsed_time={result.elapsed_time:.2f}s."
+                )
                 return result
 
             dx = goal_x - self._x
             dy = goal_y - self._y
-            rho = math.sqrt(dx**2 + dy**2) # dist robot to goal
-            angle_to_goal = math.atan2(dy, dx) #angle robot to goal
-            alpha = math.atan2( # heading error (diff angle to goal and current yaw)
+            rho = math.sqrt(dx**2 + dy**2)  # dist robot to goal
+            angle_to_goal = math.atan2(dy, dx)  # angle robot to goal
+            alpha = math.atan2(  # heading error (diff angle to goal and current yaw)
                 math.sin(angle_to_goal - self._yaw),
                 math.cos(angle_to_goal - self._yaw),
             )
 
-            cmd = TwistStamped() # Velocity command
+            cmd = TwistStamped()  # Velocity command
             cmd.header.stamp = self.get_clock().now().to_msg()
             cmd.twist.linear.x = max(
                 -self.MAX_LINEAR, min(self.MAX_LINEAR, self._k_rho * rho)
@@ -209,24 +224,27 @@ class NavigateToGoalServer(Node):
                 throttle_duration_sec=1.0,
             )
 
-
-            total_dist += math.sqrt((self._x - prev_x)**2 + (self._y - prev_y)**2)
+            total_dist += math.sqrt((self._x - prev_x) ** 2 + (self._y - prev_y) ** 2)
             prev_x = self._x
             prev_y = self._y
 
             # publish feedback at 2 Hz (pub every 10th iterations at 20Hz)
             feedback_counter += 1
             if feedback_counter % 10 == 0:
-                self._set_feedback_pose(feedback_msg) # fill in robot curr_pose(x,y,yaw)
+                self._set_feedback_pose(
+                    feedback_msg
+                )  # fill in robot curr_pose(x,y,yaw)
                 feedback_msg.distance_remaining = rho
-                goal_handle.publish_feedback(feedback_msg) # send feedback msg to client 
+                goal_handle.publish_feedback(
+                    feedback_msg
+                )  # send feedback msg to client
             rate.sleep()
-
 
         yaw_error = math.atan2(
             math.sin(goal_yaw - self._yaw),
-            math.cos(goal_yaw - self._yaw),)
-        
+            math.cos(goal_yaw - self._yaw),
+        )
+
         # Phase 2: rotate in place to reach the desired yaw
         # k_yaw scale yaw err into angular_vel
         while abs(yaw_error) > self._yaw_tolerance:
@@ -242,16 +260,17 @@ class NavigateToGoalServer(Node):
                 result.success = False
                 result.total_distance = total_dist
                 result.elapsed_time = float(time.time() - start_time)
-                self.get_logger().info(f"Goal canceled: total_distance={total_dist:.2f}, elapsed_time={result.elapsed_time:.2f}s.")                
+                self.get_logger().info(
+                    f"Goal canceled: total_distance={total_dist:.2f}, elapsed_time={result.elapsed_time:.2f}s."
+                )
                 return result
 
             # Publish only angular vel for rotation since already at goal
             cmd = TwistStamped()
-            cmd.header.stamp = self.get_clock().now().to_msg()                             
+            cmd.header.stamp = self.get_clock().now().to_msg()
             cmd.twist.angular.z = max(
-                -self.MAX_ANGULAR,
-                min(self.MAX_ANGULAR, self._k_yaw * yaw_error)
-                )
+                -self.MAX_ANGULAR, min(self.MAX_ANGULAR, self._k_yaw * yaw_error)
+            )
             self._cmd_pub.publish(cmd)
 
             # publish feedback at 2 Hz (every 10 iterations at 20Hz)
@@ -265,10 +284,11 @@ class NavigateToGoalServer(Node):
         # Mark goal as succeeded, stop robot and return success
         self._stop_robot()
         goal_handle.succeed()
-        self.get_logger().info(f"Goal reached: ({goal_x:.2f}, {goal_y:.2f}, final_heading={goal_yaw:.2f})")
+        self.get_logger().info(
+            f"Goal reached: ({goal_x:.2f}, {goal_y:.2f}, final_heading={goal_yaw:.2f})"
+        )
         result.success = True
         result.total_distance = total_dist
-        result.elapsed_time = float( time.time() - start_time)
-        
+        result.elapsed_time = float(time.time() - start_time)
+
         return result
-    
