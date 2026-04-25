@@ -138,7 +138,7 @@ class NavigateToGoalServer(Node):
     
     def _execute_callback(self, goal_handle) -> NavigateToGoal.Result:
         """Get goal from client and drive until goal, 
-        then rotate until correct direction and reutrn the result
+        then rotate until correct direction and return the result
 
         Args:
             goal_handle: The goal handle (x,y,final_heading).
@@ -146,7 +146,8 @@ class NavigateToGoalServer(Node):
         Returns:
             NavigateToGoal.Result
         """
-
+        
+        # Get goal from action request
         goal_x = goal_handle.request.goal_position.x
         goal_y = goal_handle.request.goal_position.y
         goal_yaw = goal_handle.request.final_heading
@@ -157,17 +158,19 @@ class NavigateToGoalServer(Node):
 
         start_time = time.time()
         rate = self.create_rate(20) # loop run 20 time per sec
-        feedback_counter = 0
+        feedback_counter = 0 # counter for feedback freqeuncy at 2Hz (every 10 iter at 20Hz)
 
 
-        rho = math.sqrt((goal_x - self._x)**2 + (goal_y - self._y)**2)
+        rho = math.sqrt((goal_x - self._x)**2 + (goal_y - self._y)**2) # distance from curr to goal
         prev_x = self._x
         prev_y = self._y
 
         # Phase 1 - Position loop to drive to goal position
+        # k_rho scale dist err into linear_vel
+        # k_allpha scale heading err(alpha) into angular_vel
         while rho > self._tolerance:
 
-            # Check for cancellation before
+            # Check for cancellation before to stop robot and return result
             if goal_handle.is_cancel_requested:
                 self._stop_robot()
                 goal_handle.canceled()
@@ -185,7 +188,8 @@ class NavigateToGoalServer(Node):
                 math.sin(angle_to_goal - self._yaw),
                 math.cos(angle_to_goal - self._yaw),
             )
-            cmd = TwistStamped()
+
+            cmd = TwistStamped() # Velocity command
             cmd.header.stamp = self.get_clock().now().to_msg()
             cmd.twist.linear.x = max(
                 -self.MAX_LINEAR, min(self.MAX_LINEAR, self._k_rho * rho)
@@ -195,6 +199,8 @@ class NavigateToGoalServer(Node):
                 min(self.MAX_ANGULAR, self._k_alpha * alpha),
             )
             self._cmd_pub.publish(cmd)
+
+            # shows pose, distance, and commands at 1 Hz
             self.get_logger().info(
                 f"[position] pose=({self._x:.2f}, {self._y:.2f}, "
                 f"yaw={self._yaw:.2f}) rho={rho:.2f} alpha={alpha:.2f} "
@@ -208,12 +214,12 @@ class NavigateToGoalServer(Node):
             prev_x = self._x
             prev_y = self._y
 
-            # publish feedback at 2 Hz (every 10 iterations at 20Hz)
+            # publish feedback at 2 Hz (pub every 10th iterations at 20Hz)
             feedback_counter += 1
             if feedback_counter % 10 == 0:
-                self._set_feedback_pose(feedback_msg)
+                self._set_feedback_pose(feedback_msg) # fill in robot curr_pose(x,y,yaw)
                 feedback_msg.distance_remaining = rho
-                goal_handle.publish_feedback(feedback_msg)
+                goal_handle.publish_feedback(feedback_msg) # send feedback msg to client 
             rate.sleep()
 
 
@@ -222,6 +228,7 @@ class NavigateToGoalServer(Node):
             math.cos(goal_yaw - self._yaw),)
         
         # Phase 2: rotate in place to reach the desired yaw
+        # k_yaw scale yaw err into angular_vel
         while abs(yaw_error) > self._yaw_tolerance:
             yaw_error = math.atan2(
                 math.sin(goal_yaw - self._yaw),
@@ -238,7 +245,7 @@ class NavigateToGoalServer(Node):
                 self.get_logger().info(f"Goal canceled: total_distance={total_dist:.2f}, elapsed_time={result.elapsed_time:.2f}s.")                
                 return result
 
-            # Publish only angular vel for rotation
+            # Publish only angular vel for rotation since already at goal
             cmd = TwistStamped()
             cmd.header.stamp = self.get_clock().now().to_msg()                             
             cmd.twist.angular.z = max(
@@ -255,7 +262,7 @@ class NavigateToGoalServer(Node):
                 goal_handle.publish_feedback(feedback_msg)
             rate.sleep()
 
-        # Mark goal as succeeded
+        # Mark goal as succeeded, stop robot and return success
         self._stop_robot()
         goal_handle.succeed()
         self.get_logger().info(f"Goal reached: ({goal_x:.2f}, {goal_y:.2f}, final_heading={goal_yaw:.2f})")
