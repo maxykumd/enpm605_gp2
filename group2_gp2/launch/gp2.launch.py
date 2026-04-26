@@ -51,7 +51,6 @@ def generate_launch_description() -> LaunchDescription:
     server_node = Node(   # Create the NavigateToGoal action server node with parameters for goal and yaw tolerances
         package=package_name,
         executable="navigate_to_goal_server",
-        name="navigate_to_goal_server",
         output="screen",
         emulate_tty=True,
         parameters=[
@@ -66,7 +65,6 @@ def generate_launch_description() -> LaunchDescription:
     client_node = Node(   # Create the NavigateToGoal action client node, passing the path to the goals.yaml file as a parameter
         package=package_name,
         executable="navigate_to_goal_client",
-        name="navigate_to_goal_client",
         output="screen",
         emulate_tty=True,
         parameters=[goals_file],
