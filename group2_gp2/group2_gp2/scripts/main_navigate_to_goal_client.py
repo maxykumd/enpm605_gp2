@@ -2,28 +2,26 @@
 # Module: main_navigate_to_goal_client.py - Entry point for the NavigateToGoalClient node. Initializes ROS2, creates the node, and spins it.
 
 import rclpy
-
 from group2_gp2.navigate_to_goal_client import NavigateToGoalClient
-
 
 def main(args=None) -> None:
     """
-    Main function that initializes and runs the action client node.
+    Main function to initialize ROS2 and run the NavigateToGoalClient node.
 
     Args:
-        args: Optional command-line arguments passed to ROS2.
+        args: Optional command-line arguments for ROS2 initialization.
     """
-    rclpy.init(args=args)
+    rclpy.init(args=args) 
 
-    node = NavigateToGoalClient()
+    client_node = NavigateToGoalClient()   # Load goals from parameters and prepare the action client
 
     try:
-        node.send_next_goal()
-        rclpy.spin(node)
+        client_node.send_next_goal()   # Start the sequence by sending the first goal
+        rclpy.spin(client_node)   # Keep the node alive to process action results and send subsequent goals
     except KeyboardInterrupt:
-        node.get_logger().info("Shutting down NavigateToGoalClient node.")
+        client_node.get_logger().info("Shutting down NavigateToGoalClient node.")
     finally:
-        node.destroy_node()
+        client_node.destroy_node()
         rclpy.shutdown()
 
 
